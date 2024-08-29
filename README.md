@@ -11,6 +11,6 @@ http://127.0.0.1:8000/（认证页面也可以爆破）
 
 2、自定义user和passwd
 
-3、默认线程300
+3、默认线程100
 
 ![QQ20240829-150500](https://github.com/user-attachments/assets/4f6cf89e-0bcb-4228-ab3a-6e4b486b663d)
