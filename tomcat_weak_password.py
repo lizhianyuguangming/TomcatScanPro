@@ -84,7 +84,7 @@ if __name__ == "__main__":
         logger.error("用户名、密码或URL列表为空，请检查文件")
     else:
         # 设置线程池大小
-        max_workers = 300
+        max_workers = 100
         logger.info(f"开始检测当前线程 {max_workers} ...")
 
         # 执行并发检测
