@@ -1,6 +1,11 @@
-使用方法:
+**使用方法:**
 
-1、需要爆破url写入url.txt，成功会写入success.txt，后台挂着坐等结果即可
+1、url.txt格式：
+https://127.0.0.1/manager/html
+或者
+http://127.0.0.1:8000/（认证页面也可以爆破）
+登录成功会写入success.txt，后台挂着坐等结果即可
+![image](https://github.com/user-attachments/assets/93c03073-15d8-4e4f-b984-7075c415b3b9)
 
 2、自定义user和passwd
 
