@@ -84,3 +84,6 @@ pip install -r requirements.txt
    ```
 
 运行脚本后，将尝试在 `http://example.com/manager/html` 使用 `user.txt` 和 `passwd.txt` 中的组合进行登录，并记录成功的结果。
+
+![QQ20240902-165901](https://github.com/user-attachments/assets/f920d41c-1427-489f-9b34-eb649160bd12)
+
