@@ -1,5 +1,0 @@
-tomcat
-admin
-root
-administrator
-system
