@@ -1,0 +1,23 @@
+# 文件路径配置
+files:
+  url_file: "data/urls.txt"        # 存放URL的文件路径
+  user_file: "data/user.txt"       # 存放用户名的文件路径
+  passwd_file: "data/passwd.txt"   # 存放密码的文件路径
+  shell_file: "data/shell.jsp"     # shell 文件路径
+  output_file: "success.txt"       # 用于存储结果的输出文件路径
+
+# 线程池配置
+thread_pool:
+  max_workers_limit: 500           # 最大线程数限制
+  min_workers: 100                 # 最小线程数
+  combination_per_thread: 40       #设置每多少个组合分配一个线程
+
+# 重试配置
+retry:
+  check_weak_password:
+    max_retries: 3                 # URL无法访问的最大重试次数
+    retry_delay: 2                 # 每次重试前的延迟时间（秒）
+
+  deploy_godzilla_war:
+    max_retries: 3                 # 文件上传的最大重试次数
+    retry_delay: 2                 # 每次重试前的延迟时间（秒）
