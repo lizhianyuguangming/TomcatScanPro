@@ -2,7 +2,7 @@
 
 ## 简介
 
-该脚本用于检查Apache Tomcat管理页面的弱密码，并尝试通过上传自定义WAR包部署Godzilla Webshell。如果成功，将记录成功登录的信息以及获取到的Webshell地址。
+该脚本用于检查Apache Tomcat管理页面的弱密码，并尝试通过上传自定义WAR包部署Webshell。如果成功，将记录成功登录的信息以及获取到的Webshell地址。
 
 ## 功能
 
