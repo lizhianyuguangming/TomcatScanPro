@@ -43,8 +43,9 @@
 ## 使用方法
 
 1. 准备包含URL、用户名和密码的文本文件，分别命名为`urls.txt`、`user.txt`和`passwd.txt`。
-2. 在`config.yaml`中配置文件路径和其他设置。
-3. 运行脚本，将会在`success.txt`文件中记录成功的登录信息和Webshell的URL。
+2. url保存格式：https://127.0.0.1/manager/html
+3. 在`config.yaml`中配置文件路径和其他设置。
+4. 运行脚本，将会在`success.txt`文件中记录成功的登录信息和Webshell的URL。
 
    ```
    python TomcatWeakPassChecker.py
