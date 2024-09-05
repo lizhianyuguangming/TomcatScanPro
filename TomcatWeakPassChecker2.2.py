@@ -179,7 +179,7 @@ def check_weak_password(url, usernames, passwords, output_file, max_retries, ret
             time.sleep(retry_delay)   # 重试前等待
             attempt += 1
     if attempt == max_retries:
-        logger.error(f"{Fore.CYAN}[-] 最大重试次数已达，无法访问 {url}，将该 URL 从检测列表中移除 {Style.RESET_ALL}")
+        logger.error(f"{Fore.CYAN}[*] 最大重试次数已达，无法访问 {url}，将该 URL 从检测列表中移除 {Style.RESET_ALL}")
         return None  # 返回 None 表示该 URL 无法访问
 
     return url, None, None
@@ -249,7 +249,7 @@ def check_cve_2017_12615(url,config):
                 else:
                     logger.warning(f"{Fore.RED}[!] CVE-2017-12615 文件上传成功，但访问失败: {check_url} {Style.RESET_ALL}")
             else:
-                logger.warning(f"{Fore.GREEN}[!] 失败: CVE-2017-12615 漏洞利用方式 {idx + 1} {method_url} {Style.RESET_ALL}")
+                logger.warning(f"{Fore.GREEN}[-] 失败: CVE-2017-12615 漏洞利用方式{idx + 1} {Fore.WHITE}({response.status_code}) {method_url} {Style.RESET_ALL}")
         return False, None    # 如果所有利用方式都失败
 
     except requests.exceptions.RequestException as e:
