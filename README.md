@@ -8,9 +8,13 @@
 
 ### 1. **CVE-2017-12615 漏洞检测**
    - 工具支持三种利用方式：
-     1. `PUT /<filename>.jsp/`
-     2. `PUT /<filename>.jsp%20`
-     3. `PUT /<filename>.jsp::$DATA`
+
+      `PUT /1.jsp/`
+     
+      `PUT /1.jsp%20`
+     
+      `PUT /1.jsp::$DATA`
+     
    - 成功上传后，工具会尝试访问并执行上传的 JSP 文件，判断是否能远程执行代码。
    - 对每种利用方式的结果分别记录成功或失败状态。
 
