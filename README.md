@@ -33,38 +33,14 @@ pip install -r requirements.txt
    ```
 
 
+![QQ20240902-165901](https://github.com/user-attachments/assets/f920d41c-1427-489f-9b34-eb649160bd12)
+
+
 ## 注意事项
 
 - 使用此脚本时请遵守相关法律法规，不要进行未授权的操作。
 - 本脚本仅供教育和测试用途，不承担任何由不当使用造成的后果。
 
-## 示例
 
-假设你有如下文件：
-
-- `user.txt` 包含以下内容：
-
-   ```
-   admin
-   tomcat
-   ```
-
-- `passwd.txt` 包含以下内容：
-
-   ```
-   admin
-   tomcat
-   123456
-   ```
-
-`urls.txt` 包含以下内容：
-
-   ```
-   http://example.com/manager/html
-   ```
-
-运行脚本后，将尝试在 `http://example.com/manager/html` 使用 `user.txt` 和 `passwd.txt` 中的组合进行登录，并记录成功的结果。
-
-![QQ20240902-165901](https://github.com/user-attachments/assets/f920d41c-1427-489f-9b34-eb649160bd12)
 
 **使用有什么问题或改进想法，在Issues提出**
