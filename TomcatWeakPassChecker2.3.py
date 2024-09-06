@@ -595,10 +595,8 @@ def check_cve_2017_12615_and_cnvd_2020_10487(url, config):
                 if lfi_check in result_data:
                     logger.info(f"{Fore.RED}[+] CNVD-2020-10487 本地文件包含成功: {target_host}:{target_port} {Style.RESET_ALL}")
                     return True, "CNVD-2020-10487", f"ajp://{target_host}:{target_port}/WEB-INF/web.xml"  # 返回漏洞类型和URL
-                else:
-                    logger.warning(f"{Fore.GREEN}[-] CNVD-2020-10487 本地文件包含尝试失败 {Style.RESET_ALL}")
         except Exception as e:
-            logger.warning(f"{Fore.GREEN}[!] 失败: CNVD-2020-10487 : {url} {str(e)} {Style.RESET_ALL}")
+            logger.warning(f"{Fore.GREEN}[-] 失败: CNVD-2020-10487 : {url} {str(e)} {Style.RESET_ALL}")
 
         return False, None, None  # 如果两个漏洞都未被利用成功，返回默认的失败值
 
@@ -606,7 +604,7 @@ def check_cve_2017_12615_and_cnvd_2020_10487(url, config):
         return False, None, None
 
 
-# 在每个URL上执行CVE-2017-12615检测并继续进行弱口令检测
+# 在每个URL上执行CVE-2017-12615、CNVD_2020_10487检测并继续进行弱口令检测
 def detect_and_check(url, usernames, passwords, output_file, config):
     # 先进行CVE-2017-12615检测
     success, vuln_type, exploit_url = check_cve_2017_12615_and_cnvd_2020_10487(url, config)
