@@ -570,7 +570,7 @@ def check_cve_2017_12615_and_cnvd_2020_10487(url, config):
                         f"{Fore.RED}[!] CVE-2017-12615 文件上传成功，但访问失败: {check_url} {Style.RESET_ALL}")
             else:
                 logger.warning(
-                    f"{Fore.GREEN}[-] 失败: CVE-2017-12615 漏洞利用方式{idx + 1} {Fore.WHITE}({response.status_code}) {method_url} {Style.RESET_ALL}")
+                   f"{Fore.GREEN}[-] 失败: CVE-2017-12615 漏洞利用方式{idx + 1} {Fore.WHITE}({response.status_code}) {Fore.BLUE}{method_url} {Style.RESET_ALL}")
 
         # 2. 检测CNVD-2020-10487漏洞 (AJP协议漏洞本地文件包含)
         try:
@@ -596,7 +596,7 @@ def check_cve_2017_12615_and_cnvd_2020_10487(url, config):
                     logger.info(f"{Fore.RED}[+] CNVD-2020-10487 本地文件包含成功: {target_host}:{target_port} {Style.RESET_ALL}")
                     return True, "CNVD-2020-10487", f"ajp://{target_host}:{target_port}/WEB-INF/web.xml"  # 返回漏洞类型和URL
         except Exception as e:
-            logger.warning(f"{Fore.GREEN}[-] 失败: CNVD-2020-10487 : {url} {str(e)} {Style.RESET_ALL}")
+            logger.warning(f"{Fore.GREEN}[-] 失败: CNVD-2020-10487 {Fore.BLUE}{url} {Fore.YELLOW}{str(e)} {Style.RESET_ALL}")
 
         return False, None, None  # 如果两个漏洞都未被利用成功，返回默认的失败值
 
@@ -610,8 +610,9 @@ def detect_and_check(url, usernames, passwords, output_file, config):
     success, vuln_type, exploit_url = check_cve_2017_12615_and_cnvd_2020_10487(url, config)
 
     if success:
+        target_host = url.split("://")[-1].split("/")[0]
         with open(output_file, 'a', encoding='utf-8') as f:
-            f.write(f"{url} - {vuln_type} Exploited: {exploit_url}\n")
+            f.write(f"{target_host} - {vuln_type} Exploited: {exploit_url}\n")
 
     # 无论漏洞利用成功与否，都进行弱口令检测
     check_weak_password(url, usernames, passwords, output_file,
