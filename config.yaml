@@ -14,6 +14,12 @@ retry:
     max_retries: 3                 # 文件上传的最大重试次数
     retry_delay: 2                 # 每次重试前的延迟时间（秒）
 
+# CNVD-2020-10487 漏洞配置
+cnvd_2020_10487:
+  port: 8009                       # AJP端口
+  file_path: "WEB-INF/web.xml"     # 要读取的文件路径 (默认读取 /etc/passwd)
+  lfi_check: "Welcome to Tomcat"   # 用户自定义的判断条件，表示文件包含成功时内容的特征字符串
+
 # 文件路径配置
 files:
   url_file: "data/urls.txt"        # 存放URL的文件路径
