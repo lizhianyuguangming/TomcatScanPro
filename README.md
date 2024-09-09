@@ -53,7 +53,7 @@
 4. 运行脚本，将会在`success.txt`文件中记录成功的登录信息和Webshell的URL。
 
    ```
-   python TomcatWeakPassChecker.py
+   python TomcatScanPro.py
    ```
 
 
