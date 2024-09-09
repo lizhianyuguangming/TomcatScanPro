@@ -57,7 +57,8 @@
    ```
 
 
-![QQ20240902-165901](https://github.com/user-attachments/assets/f920d41c-1427-489f-9b34-eb649160bd12)
+![QQ20240909-091735](https://github.com/user-attachments/assets/d87e935e-8ce4-4d8a-b310-fa0e2988be49)
+
 
 
 ## 环境安装
