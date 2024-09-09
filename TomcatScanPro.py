@@ -13,6 +13,7 @@ import random
 import string
 import socket
 import struct
+from io import BytesIO as StringIO
 
 # 忽略HTTPS请求中的不安全请求警告
 requests.packages.urllib3.disable_warnings()
@@ -258,7 +259,7 @@ class NotFoundException(Exception):
     pass
 
 
-class AjpBodyRequest(object):
+class AjpBodyRequest:
     # server == web server, container == servlet
     SERVER_TO_CONTAINER, CONTAINER_TO_SERVER = range(2)
     MAX_REQUEST_LENGTH = 8186
@@ -293,7 +294,7 @@ class AjpBodyRequest(object):
                 break
 
 
-class AjpForwardRequest(object):
+class AjpForwardRequest:
     _, OPTIONS, GET, HEAD, POST, PUT, DELETE, TRACE, PROPFIND, PROPPATCH, MKCOL, COPY, MOVE, LOCK, UNLOCK, ACL, REPORT, VERSION_CONTROL, CHECKIN, CHECKOUT, UNCHECKOUT, SEARCH, MKWORKSPACE, UPDATE, LABEL, MERGE, BASELINE_CONTROL, MKACTIVITY = range(
         28)
     REQUEST_METHODS = {'GET': GET, 'POST': POST, 'HEAD': HEAD, 'OPTIONS': OPTIONS, 'PUT': PUT, 'DELETE': DELETE,
@@ -422,7 +423,7 @@ class AjpForwardRequest(object):
         return res
 
 
-class AjpResponse(object):
+class AjpResponse:
     _, _, _, SEND_BODY_CHUNK, SEND_HEADERS, END_RESPONSE, GET_BODY_CHUNK = range(7)
     COMMON_SEND_HEADERS = [
         "Content-Type", "Content-Language", "Content-Length", "Date", "Last-Modified",
@@ -502,7 +503,7 @@ def prepare_ajp_forward_request(target_host, req_uri, method=AjpForwardRequest.G
     return fr
 
 
-class Tomcat(object):
+class Tomcat:
     def __init__(self, target_host, target_port):
         self.target_host = target_host
         self.target_port = target_port
