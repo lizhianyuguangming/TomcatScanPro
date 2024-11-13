@@ -25,7 +25,6 @@ files:
   url_file: "data/urls.txt"        # 存放URL的文件路径
   user_file: "data/user.txt"       # 存放用户名的文件路径
   passwd_file: "data/passwd.txt"   # 存放密码的文件路径
-  shell_file: "data/shell.jsp"     # shell 文件路径
   output_file: "success.txt"       # 用于存储结果的输出文件路径
 
   #war部署后台上传与CVE-2017-12615共用马，注意此处格式错误容易报错上传失败，修改后建议先用靶场测试-https://vulfocus.cn/#/login
