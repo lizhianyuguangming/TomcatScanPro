@@ -1,5 +1,7 @@
 # TomcatScanPro
 
+README Version: [English](README_EN.md)
+
 
       如果您觉得这个项目对您有帮助，别忘了点亮 Star ⭐！
       您的支持是我们继续优化和改进这个项目的动力！ 😊
